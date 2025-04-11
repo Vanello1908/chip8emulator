@@ -7,5 +7,6 @@ add_executable(emulator main.c
         chip8.h
         chip8.c
         definitions.h
-        opcodes.h
-        opcodes.c)
+        utils.h
+        utils.c
+)
