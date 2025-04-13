@@ -7,5 +7,6 @@ word getAddress(word instruction);
 byte getByte(word instruction);
 byte getNibble(word instruction);
 byte getX(word instruction);
-byte getY(word instruction)
+byte getY(word instruction);
+byte isKeyPressed(byte key);
 #endif
