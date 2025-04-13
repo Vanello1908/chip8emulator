@@ -38,6 +38,14 @@ word readWord(chip8* chip) {
 
 chip8result executeInstruction(chip8 *chip) {
     word instruction = readWord(chip);
+    byte n = getNibble(instruction);
+    byte nn = getByte(instruction);
+    word nnn = getAddress(instruction);
+    byte x = getX(instruction);
+    byte y = getY(instruction);
+
+    byte buffer;
+
     switch(instruction >> 12) {
         case 0x0:
             if(instruction == 0x00E0) { //CLS
@@ -54,14 +62,14 @@ chip8result executeInstruction(chip8 *chip) {
             break;
 
         case 0x1: //JP addr
-            chip->PC = getAddress(instruction);
+            chip->PC = nnn;
             break;
 
         case 0x2: //CALL addr
             if(chip->SP != 0xF) {
                 chip->SP++;
                 chip->stack[chip->SP] = chip->PC;
-                chip->PC = getAddress(instruction);
+                chip->PC = nnn;
             }
             else {
                 return ERROR;
@@ -69,111 +77,105 @@ chip8result executeInstruction(chip8 *chip) {
             break;
 
         case 0x3: //SE Vx, byte
-            if(chip->V[getX(instruction)] == getByte(instruction)) {
+            if(chip->V[x] == nn) {
                 chip->PC += 2;
             }
             break;
 
         case 0x4: //SNE Vx, byte
-            if(chip->V[getX(instruction)] != getByte(instruction)) {
+            if(chip->V[x] != nn) {
                 chip->PC += 2;
             }
             break;
 
         case 0x5: //SE Vx, Vy
-            if(chip->V[getX(instruction)] == chip->V[getY(instruction)]) {
+            if(chip->V[x] == chip->V[y]) {
                 chip->PC += 2;
             }
             break;
 
         case 0x6: //LD Vx, byte
-            chip->V[getX(instruction)] = getByte(instruction);
+            chip->V[x] = nn;
             break;
 
         case 0x7: //ADD Vx, byte
-            chip->V[getX(instruction)] += getByte(instruction);
+            chip->V[x] += nn;
             break;
 
         case 0x8:
             switch(instruction & 0xF) {
                 case 0x0: //LD Vx, Vy
-                    chip->V[getX(instruction)] = chip->V[getY(instruction)];
+                    chip->V[x] = chip->V[y];
                     break;
                 case 0x1: //OR Vx, Vy
-                    chip->V[getX(instruction)] |= chip->V[getY(instruction)];
+                    chip->V[x] |= chip->V[y];
                     break;
                 case 0x2: //AND Vx, Vy
-                    chip->V[getX(instruction)] &= chip->V[getY(instruction)];
+                    chip->V[x] &= chip->V[y];
                     break;
                 case 0x3: //XOR Vx, Vy
-                    chip->V[getX(instruction)] ^= chip->V[getY(instruction)];
+                    chip->V[x] ^= chip->V[y];
                     break;
                 case 0x4: //ADD Vx, Vy
-                    byte xValue = chip->V[getX(instruction)];
-                    chip->V[getX(instruction)] += chip->V[getY(instruction)];
-                    if(chip->V[getX(instruction)] < xValue) {
-                        chip->V[0xF] = 0x1;
-                    }
+                    buffer = chip->V[x];
+                    chip->V[x] += chip->V[y];
+                    chip->V[0xF] = chip->V[x] < buffer;
                     break;
                 case 0x5: //SUB Vx, Vy
-                    if(chip->V[getX(instruction)] > chip->V[getY(instruction)]) {
-                        chip->V[0xF] = 0x1;
-                    } else {
-                        chip->V[0xF] = 0x0;
-                    }
-                    chip->V[getX(instruction)] -= chip->V[getY(instruction)];
+                    buffer = chip->V[x] >= chip->V[y];
+                    chip->V[x] = chip->V[x] - chip->V[y];
+                    chip->V[0xF] = buffer;
                     break;
                 case 0x6: //SHR Vx
                     if(COPY_Y_ON_SHIFTING) {
-                        chip->V[getX(instruction)] = chip->V[getY(instruction)];
+                        chip->V[x] = chip->V[y];
                     }
-                    chip->V[0xF] = chip->V[getX(instruction)] & 0b1;
-                    chip->V[getX(instruction)] >>= 1;
+                    buffer = chip->V[x] & 0b1;
+                    chip->V[x] >>= 1;
+                    chip->V[0xF] = buffer;
                     break;
                 case 0x7: //SUBN Vx, Vy
-                    if(chip->V[getY(instruction)] > chip->V[getX(instruction)]) {
-                        chip->V[0xF] = 0x1;
-                    } else {
-                        chip->V[0xF] = 0x0;
-                    }
-                    chip->V[getX(instruction)] = chip->V[getY(instruction)] - chip->V[getX(instruction)];
+                    buffer = chip->V[y] >= chip->V[x];
+                    chip->V[x] = chip->V[y] - chip->V[x];
+                    chip->V[0xF] = buffer;
                     break;
                 case 0xE: //SHL Vx
                     if(COPY_Y_ON_SHIFTING) {
-                        chip->V[getX(instruction)] = chip->V[getY(instruction)];
+                        chip->V[x] = chip->V[y];
                     }
-                    chip->V[0xF] = (chip->V[getX(instruction)] >> 7) & 0b1;
-                    chip->V[getX(instruction)] <<= 1;
+                    buffer = (chip->V[x] >> 7) & 0b1;
+                    chip->V[x] <<= 1;
+                    chip->V[0xF] = buffer;
             }
             break;
         case 0x9: //SNE Vx, Vy
-            if(getNibble(instruction) == 0) {
-                if(chip->V[getX(instruction)] != chip->V[getY(instruction)]) {
+            if(n == 0) {
+                if(chip->V[x] != chip->V[y]) {
                     chip->PC += 2;
                 }
             }
             break;
         case 0xA: //LD I, addr
-            chip->I = getAddress(instruction);
+            chip->I = nnn;
             break;
         case 0xB: //JP V0, addr
-            word address = getAddress(instruction);
+            word address = nnn;
             if(BXNN_JUMP) {
-                address += chip->V[getX(instruction)];
+                address += chip->V[x];
             } else {
                 address += chip->V[0x0];
             }
-            chip->PC = chip->V[0x0] + getAddress(instruction);
+            chip->PC = address;
             break;
         case 0xC: //RND Vx, byte
-            chip->V[getX(instruction)] = (rand() % getByte(instruction)) & getByte(instruction);
+            chip->V[x] = (rand() % nn) & nn;
             break;
         case 0xD: //DRW Vx, Vy, nibble
-            draw(chip, chip->V[getX(instruction)], chip->V[getY(instruction)], getNibble(instruction));
+            draw(chip, chip->V[x], chip->V[y], n);
             break;
         case 0xE:
             return ERROR;
-            byte ending = getByte(instruction);
+            byte ending = nn;
             switch (ending) {
                 case 0x9E: //SKP Vx
                     //TODO: Skip if pressed
@@ -184,12 +186,12 @@ chip8result executeInstruction(chip8 *chip) {
             }
             break;
         case 0xF:
-            byte end = getByte(instruction);
+            byte end = nn;
             //TODO: create sound and delay timers
             switch (end) {
                 case 0x07: //LD Vx, DT
                     return ERROR;
-                    chip->V[getX(instruction)] = chip->DT;
+                    chip->V[x] = chip->DT;
                     break;
                 case 0x0A: //LD Vx, K
                     return ERROR;
@@ -197,14 +199,14 @@ chip8result executeInstruction(chip8 *chip) {
                     break;
                 case 0x15: //LD DT, Vx
                     return ERROR;
-                    chip->DT = chip->V[getX(instruction)];
+                    chip->DT = chip->V[x];
                     break;
                 case 0x18: //LD ST, Vx
                     return ERROR;
-                    chip->ST = chip->V[getX(instruction)];
+                    chip->ST = chip->V[x];
                     break;
                 case 0x1E: //ADD I, Vx
-                    chip->I += chip->V[getX(instruction)];
+                    chip->I += chip->V[x];
                     break;
                 case 0x29: //LD F, Vx
                     //TODO: interpreter font digits
@@ -213,14 +215,14 @@ chip8result executeInstruction(chip8 *chip) {
                     if(chip->I + 2 > 0xFFF) {
                         return ERROR;
                     }
-                    byte num = chip->V[getX(instruction)];
+                    byte num = chip->V[x];
                     for(int i = 0; i < 3; i++) {
                         chip->memory[chip->I + (2 - i)] = num % 10;
                         num /= 10;
                     }
                     break;
                 case 0x55: //LD [I], Vx
-                    byte index = getX(instruction);
+                    byte index = x;
                     if(chip->I + index > 0xFFF) {
                         return ERROR;
                     }
@@ -229,7 +231,7 @@ chip8result executeInstruction(chip8 *chip) {
                     }
                     break;
                 case 0x65: //LD Vx, [I]
-                    byte index2 = getX(instruction);
+                    byte index2 = x;
                     if(chip->I + index2 > 0xFFF) {
                         return ERROR;
                     }

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <SDL2/SDL.h>
 #include "chip8.h"
 #include "definitions.h"
@@ -39,7 +40,7 @@ int main( int argc, char *argv[] )
 {
     chip8* chip = createChip();
     byte buffer[0xFFFFF];
-    FILE* file = fopen("./roms/4.ch8", "r");
+    FILE* file = fopen("./roms/3.ch8", "r");
     int size = fread(&buffer, 1, 0xFFF, file);
     writeROM(chip, &buffer, size);
 
@@ -47,20 +48,19 @@ int main( int argc, char *argv[] )
 
     SDL_Window* window = SDL_CreateWindow( "CHIP-8 emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_X * SCREEN_COEFF, SCREEN_Y * SCREEN_COEFF,SDL_WINDOW_ALLOW_HIGHDPI);
 
-    // Check that the window was successfully created
     if ( NULL == window )
     {
-        // In the case that the window could not be made...
         return 1;
     }
-
     SDL_Event windowEvent;
     while ( 1 )
     {
-        if(executeInstruction(chip) == ERROR) {
-            chip->PC -= 2;
-            printf("ERROR!\nAddress: %04X\nOpcode: %04X\n", chip->PC, readWord(chip));
-        };
+        for (int i = 0; i < 8; i++) {
+            //if(executeInstruction(chip) == ERROR) {
+                //chip->PC -= 2;
+                printf("Address: %04X\nOpcode: %04X\n", chip->PC, readWord(chip));
+            //}
+        }
         updateDisplay(window, chip);
         SDL_UpdateWindowSurface( window );
         while ( SDL_PollEvent( &windowEvent ) )
