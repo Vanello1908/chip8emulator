@@ -56,10 +56,10 @@ int main( int argc, char *argv[] )
     while ( 1 )
     {
         for (int i = 0; i < 8; i++) {
-            //if(executeInstruction(chip) == ERROR) {
-                //chip->PC -= 2;
-                printf("Address: %04X\nOpcode: %04X\n", chip->PC, readWord(chip));
-            //}
+            if(executeInstruction(chip) == ERROR) {
+                chip->PC -= 2;
+                printf("Address: %04X\nOpcode: %04X\n\n", chip->PC, readWord(chip));
+            }
         }
         updateDisplay(window, chip);
         SDL_UpdateWindowSurface( window );

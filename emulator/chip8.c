@@ -1,4 +1,7 @@
 #include "chip8.h"
+
+#include <stdio.h>
+
 #include "utils.h"
 #include "config.h"
 #include <stdlib.h>
@@ -37,7 +40,9 @@ word readWord(chip8* chip) {
 }
 
 chip8result executeInstruction(chip8 *chip) {
+    printf("Address: %04X\n", chip->PC);
     word instruction = readWord(chip);
+    printf("Opcode: %04X\n\n", instruction);
     byte n = getNibble(instruction);
     byte nn = getByte(instruction);
     word nnn = getAddress(instruction);
