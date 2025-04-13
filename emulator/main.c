@@ -39,9 +39,10 @@ void updateDisplay(SDL_Window* window, chip8* chip) {
 int main( int argc, char *argv[] )
 {
     chip8* chip = createChip();
-    byte buffer[0xFFFFF];
-    FILE* file = fopen("./roms/3.ch8", "r");
-    int size = fread(&buffer, 1, 0xFFF, file);
+    byte buffer[0xE00];
+    FILE* file = fopen("./roms/3.ch8", "rb");
+    int size = fread(&buffer, 1, 0xE00, file);
+    fclose(file);
     writeROM(chip, &buffer, size);
 
     SDL_Init( SDL_INIT_EVERYTHING);
