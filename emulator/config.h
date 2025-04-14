@@ -7,4 +7,6 @@ static const byte SCREEN_Y = 0x20;
 static const byte SCREEN_COEFF = 8;
 static const byte COPY_Y_ON_SHIFTING = 0;
 static const byte BXNN_JUMP = 0;
+static const byte TICKS_PER_FRAME = 8;
+static const byte FRAMES_PER_SECOND = 60;
 #endif

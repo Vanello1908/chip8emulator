@@ -30,6 +30,8 @@ byte readByte(chip8* chip);
 word readWord(chip8* chip);
 chip8result executeInstruction(chip8* chip);
 word startChip(chip8* chip);
+chip8* initChip(const char* rom_path);
+void updateTimers(chip8* chip);
 
 
 #endif

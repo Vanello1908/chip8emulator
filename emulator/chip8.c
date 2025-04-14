@@ -40,9 +40,7 @@ word readWord(chip8* chip) {
 }
 
 chip8result executeInstruction(chip8 *chip) {
-    printf("Address: %04X\n", chip->PC);
     word instruction = readWord(chip);
-    printf("Opcode: %04X\n\n", instruction);
     byte n = getNibble(instruction);
     byte nn = getByte(instruction);
     word nnn = getAddress(instruction);
@@ -195,7 +193,6 @@ chip8result executeInstruction(chip8 *chip) {
             //TODO: create sound and delay timers
             switch (end) {
                 case 0x07: //LD Vx, DT
-                    return ERROR;
                     chip->V[x] = chip->DT;
                     break;
                 case 0x0A: //LD Vx, K
@@ -203,11 +200,9 @@ chip8result executeInstruction(chip8 *chip) {
                     //TODO: wait for key pressed, stop execution
                     break;
                 case 0x15: //LD DT, Vx
-                    return ERROR;
                     chip->DT = chip->V[x];
                     break;
                 case 0x18: //LD ST, Vx
-                    return ERROR;
                     chip->ST = chip->V[x];
                     break;
                 case 0x1E: //ADD I, Vx
@@ -277,7 +272,25 @@ word startChip(chip8 *chip) {
         return chip->PC;
     }
     return 0;
+}
 
+chip8* initChip(const char *rom_path) {
+    chip8* chip = createChip();
+    byte buffer[0xE00];
+    FILE* file = fopen(rom_path, "rb");
+    int size = fread(&buffer, 1, 0xE00, file);
+    fclose(file);
+    writeROM(chip, &buffer, size);
+    return chip;
+}
+
+void updateTimers(chip8 *chip) {
+    if (chip->DT > 0x0) {
+        chip->DT -= 1;
+    }
+    if (chip->ST > 0x0) {
+        chip->ST -= 1;
+    }
 }
 
 

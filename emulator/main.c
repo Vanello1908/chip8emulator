@@ -3,8 +3,9 @@
 #include <time.h>
 #include <SDL2/SDL.h>
 #include "chip8.h"
-#include "definitions.h"
 #include "config.h"
+
+int CLOCKS_PER_FRAME = CLOCKS_PER_SEC / FRAMES_PER_SECOND;
 
 void set_pixel(SDL_Surface *surface, int x, int y, Uint32 pixel)
 {
@@ -35,28 +36,24 @@ void updateDisplay(SDL_Window* window, chip8* chip) {
     }
 }
 
-
 int main( int argc, char *argv[] )
 {
-    chip8* chip = createChip();
-    byte buffer[0xE00];
-    FILE* file = fopen("./roms/3.ch8", "rb");
-    int size = fread(&buffer, 1, 0xE00, file);
-    fclose(file);
-    writeROM(chip, &buffer, size);
+    chip8* chip = initChip("./roms/3.ch8");
 
     SDL_Init( SDL_INIT_EVERYTHING);
-
     SDL_Window* window = SDL_CreateWindow( "CHIP-8 emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_X * SCREEN_COEFF, SCREEN_Y * SCREEN_COEFF,SDL_WINDOW_ALLOW_HIGHDPI);
 
-    if ( NULL == window )
+    if (window == NULL)
     {
         return 1;
     }
+
     SDL_Event windowEvent;
-    while ( 1 )
+    int lastClockTime = 0;
+
+    while (1)
     {
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < TICKS_PER_FRAME; i++) {
             if(executeInstruction(chip) == ERROR) {
                 chip->PC -= 2;
                 printf("Address: %04X\nOpcode: %04X\n\n", chip->PC, readWord(chip));
@@ -64,6 +61,7 @@ int main( int argc, char *argv[] )
         }
         updateDisplay(window, chip);
         SDL_UpdateWindowSurface( window );
+
         while ( SDL_PollEvent( &windowEvent ) )
         {
             if ( SDL_QUIT == windowEvent.type )
@@ -71,6 +69,9 @@ int main( int argc, char *argv[] )
                 return EXIT_SUCCESS;
             }
         }
+
+        while (clock() - lastClockTime < CLOCKS_PER_FRAME) {}
+        lastClockTime = clock();
     }
 }
 
