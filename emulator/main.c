@@ -58,10 +58,12 @@ int main( int argc, char *argv[] )
                 chip->PC -= 2;
                 printf("Address: %04X\nOpcode: %04X\n\n", chip->PC, readWord(chip));
             }
+            while (clock() - lastClockTime < CLOCKS_PER_FRAME / TICKS_PER_FRAME) {}
+            lastClockTime = clock();
         }
         updateDisplay(window, chip);
         SDL_UpdateWindowSurface( window );
-
+        updateTimers(chip);
         while ( SDL_PollEvent( &windowEvent ) )
         {
             if ( SDL_QUIT == windowEvent.type )
@@ -69,9 +71,6 @@ int main( int argc, char *argv[] )
                 return EXIT_SUCCESS;
             }
         }
-
-        while (clock() - lastClockTime < CLOCKS_PER_FRAME) {}
-        lastClockTime = clock();
     }
 }
 
