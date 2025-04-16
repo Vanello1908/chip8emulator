@@ -16,6 +16,7 @@ include_directories(${SDL2_INCLUDE_DIRS})
 add_executable(emulator main.c
         utils.c
         chip8.c
+        miniaudio.c
 )
 
 target_link_libraries(emulator ${SDL2_LIBRARIES})

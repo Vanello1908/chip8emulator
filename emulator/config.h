@@ -6,7 +6,7 @@ static const byte SCREEN_X = 0x40;
 static const byte SCREEN_Y = 0x20;
 
 static const byte SCREEN_COEFF = 8;
-static const byte TICKS_PER_FRAME = 11;
+static const byte TICKS_PER_FRAME = 8;
 static const byte FRAMES_PER_SECOND = 60;
 
 static const byte LOGGING = 0;

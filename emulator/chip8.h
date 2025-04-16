@@ -15,7 +15,6 @@ typedef struct chip8 {
     word SP;
     byte keys[0x10];
     byte keysNow[0x10];
-
 } chip8;
 
 typedef enum chip8result {
@@ -31,9 +30,12 @@ void writeROM(chip8* chip, byte* rom, word size);
 byte readByte(chip8* chip);
 word readWord(chip8* chip);
 chip8result executeInstruction(chip8* chip);
-word startChip(chip8* chip);
 chip8* initChip(const char* rom_path);
 void updateTimers(chip8* chip);
+void writeMemory(chip8* chip, word address, byte value);
+byte readMemory(chip8* chip, word address);
+void writeI(chip8* chip, word value);
+
 
 
 #endif

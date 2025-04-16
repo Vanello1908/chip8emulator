@@ -5,6 +5,7 @@
 #include "chip8.h"
 #include "config.h"
 #include "utils.h"
+#include "miniaudio.h"
 
 int CLOCKS_PER_FRAME = CLOCKS_PER_SEC / FRAMES_PER_SECOND;
 
@@ -65,6 +66,12 @@ int processSDLEvents(chip8* chip) {
     return EXIT_FAILURE;
 }
 
+void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    if (((chip8*)pDevice->pUserData)->ST) { *(float*)pOutput = 0.5; }
+
+}
+
 int main( int argc, char *argv[] )
 {
     const char* romPath = "./roms/5.ch8";
@@ -72,6 +79,19 @@ int main( int argc, char *argv[] )
         romPath = argv[1];
     }
     chip8* chip = initChip(romPath);
+
+    ma_device_config config = ma_device_config_init(ma_device_type_playback);
+    config.playback.format = ma_format_f32;
+    config.playback.channels = 1;
+    config.sampleRate = 0;
+    config.dataCallback = data_callback;
+    config.pUserData = chip;
+
+    ma_device device;
+    if (ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
+        return -1;  // Failed to initialize the device.
+    }
+    ma_device_start(&device);
 
     SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     SDL_Window* window = SDL_CreateWindow( "CHIP-8 emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_X * SCREEN_COEFF, SCREEN_Y * SCREEN_COEFF,SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
@@ -110,6 +130,7 @@ int main( int argc, char *argv[] )
 
         updateTimers(chip);
     }
+    ma_device_uninit(&device);
 }
 
 

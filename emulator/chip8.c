@@ -170,13 +170,12 @@ chip8result executeInstruction(chip8 *chip) {
             chip->I = nnn;
             break;
         case 0xB: //JP V0, addr
-            word address = nnn;
             if(JUMPING) {
-                address += chip->V[x];
+                nnn += chip->V[x];
             } else {
-                address += chip->V[0x0];
+                nnn += chip->V[0x0];
             }
-            chip->PC = address;
+            chip->PC = nnn;
             break;
         case 0xC: //RND Vx, byte
             chip->V[x] = (rand() % nn) & nn;
@@ -199,9 +198,7 @@ chip8result executeInstruction(chip8 *chip) {
             }
             break;
         case 0xF:
-            //TODO: create sound
-            byte end = nn;
-            switch (end) {
+            switch (nn) {
                 case 0x07: //LD Vx, DT
                     chip->V[x] = chip->DT;
                     break;
@@ -223,34 +220,29 @@ chip8result executeInstruction(chip8 *chip) {
                     chip->ST = chip->V[x];
                     break;
                 case 0x1E: //ADD I, Vx
-                    chip->I = (chip->I + chip->V[x]) & 0x0FFF;
+                    writeI(chip, chip->I + chip->V[x]);
                     break;
                 case 0x29: //LD F, Vx
-                    chip->I = (chip->V[x] & 0xF) * 5;
+                    writeI(chip, (chip->V[x] & 0xF) * 0x5);
                     break;
                 case 0x33: //LD B, Vx
-                    byte num = chip->V[x];
+                    buffer = chip->V[x];
                     for(int i = 0; i < 3; i++) {
-                        chip->memory[(chip->I + (2 - i)) & 0x0FFF] = num % 10;
-                        num /= 10;
+                        writeMemory(chip, chip->I + (2 - i), buffer % 10);
+                        buffer /= 10;
                     }
                     break;
                 case 0x55: //LD [I], Vx
                     for(int i = 0; i <= x; i++) {
-                        chip->memory[(chip->I + i) & 0x0FFF] = chip->V[i];
+                        writeMemory(chip, chip->I + i, chip->V[i]);
                     }
-                    if (MEMORY) {
-                        chip->I = (chip->I + x + 1) & 0x0FFF;
-                    }
+                    if (MEMORY) { writeI(chip, chip->I + x + 1); }
                     break;
                 case 0x65: //LD Vx, [I]
-                    byte index2 = x;
-                    for(int i = 0; i <= index2; i++) {
-                        chip->V[i] = chip->memory[(chip->I + i) & 0x0FFF];
+                    for(int i = 0; i <= x; i++) {
+                        chip->V[i] = readMemory(chip, chip->I + i);
                     }
-                    if (MEMORY) {
-                        chip->I = (chip->I + x + 1) & 0x0FFF;
-                    }
+                    if (MEMORY) { writeI(chip, chip->I + x + 1); }
                     break;
             }
             break;
@@ -261,36 +253,23 @@ chip8result executeInstruction(chip8 *chip) {
 void draw(chip8 *chip, byte x, byte y, byte size) {
     x = x % SCREEN_X;
     y = y % SCREEN_Y;
-    byte flipResult = 0;
+    chip->V[0xF] = 0;
+
     for(byte i = 0; i < size; i++) {
         byte spriteByte = chip->memory[(chip->I+i) & 0x0FFF];
-        if (y < SCREEN_Y && y + i == SCREEN_Y && CLIPPING) {
-            break;
-        }
+        if (y + i == SCREEN_Y && CLIPPING) { break; }
         byte localY = (y + i) % SCREEN_Y;
+
         for(byte j = 0; j < 8; j++) {
-            if (x < SCREEN_X && x + j == SCREEN_X && CLIPPING) {
-                break;
-            }
+            if (x + j == SCREEN_X && CLIPPING) { break; }
             byte localX = (x + j) % SCREEN_X;
-            byte newPixel = (spriteByte >> (7 - j)) & 1;
-            if(newPixel) {
-                chip->screen[localY][localX] ^= newPixel;
-                if(chip->screen[localY][localX] == 0) {
-                    flipResult = 1;
-                }
+
+            if((spriteByte >> (7 - j)) & 1) {
+                chip->V[0xF] = chip->V[0xF] | chip->screen[localY][localX];
+                chip->screen[localY][localX] ^= 1;
             }
         }
     }
-    chip->V[0xF] = flipResult;
-}
-
-word startChip(chip8 *chip) {
-    while (executeInstruction(chip) == SUCCESS && chip->PC != 0x00) {}
-    if(chip->PC != 0x00) {
-        return chip->PC;
-    }
-    return 0;
 }
 
 chip8* initChip(const char *rom_path) {
@@ -299,17 +278,30 @@ chip8* initChip(const char *rom_path) {
     FILE* file = fopen(rom_path, "rb");
     int size = fread(&buffer, 1, 0xE00, file);
     fclose(file);
-    writeROM(chip, &buffer, size);
+    writeROM(chip, buffer, size);
     return chip;
 }
 
 void updateTimers(chip8 *chip) {
-    if (chip->DT > 0x0) {
+    if (chip->DT) {
         chip->DT -= 1;
     }
-    if (chip->ST > 0x0) {
+    if (chip->ST) {
         chip->ST -= 1;
     }
 }
+
+void writeMemory(chip8 *chip, word address, byte value) {
+    chip->memory[address & 0x0FFF] = value;
+}
+
+byte readMemory(chip8 *chip, word address) {
+    return chip->memory[address & 0x0FFF];
+}
+
+void writeI(chip8* chip, word value) {
+    chip->I = value & 0x0FFF;
+}
+
 
 
