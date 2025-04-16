@@ -13,6 +13,8 @@ typedef struct chip8 {
     word ST;
     word PC;
     word SP;
+    byte keys[0x10];
+    byte keysNow[0x10];
 
 } chip8;
 

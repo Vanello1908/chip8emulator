@@ -26,15 +26,16 @@ byte getY(word instruction) {
     return (instruction >> 4) & 0xF;
 }
 
-byte isKeyPressed(byte key) {
-    //TODO: key pressed
-    char ckey = '0';
-    if(key < 0xA){
-        ckey = key + 0x30;
+byte keyToByte(const char* key) {
+    if(strlen(key) != 1) {
+        return 0x10;
     }
-    else {
-        ckey = key - 0xA + 0x41;
+    char key_sym = *key;
+    if (key_sym >= 0x30 && key_sym <= 0x39) {
+        return (byte)key_sym - 0x30;
     }
-    SDL_Event event;
-    return 0x0;
+    if (key_sym >= 0x41 && key_sym <= 0x46) {
+        return (byte)key_sym - 0x41 + 0xA;
+    }
+    return 0x10;
 }

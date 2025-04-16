@@ -5,8 +5,12 @@ static const byte SCREEN_X = 0x40;
 static const byte SCREEN_Y = 0x20;
 
 static const byte SCREEN_COEFF = 8;
-static const byte COPY_Y_ON_SHIFTING = 0;
-static const byte BXNN_JUMP = 0;
 static const byte TICKS_PER_FRAME = 8;
 static const byte FRAMES_PER_SECOND = 60;
+
+// Quirks
+static const byte COPY_Y_ON_SHIFTING = 1;
+static const byte BXNN_JUMP = 0;
+static const byte VF_RESET = 1;
+static const byte MEMORY = 1;
 #endif

@@ -29,7 +29,7 @@ void writeROM(chip8* chip, byte* rom, word size) {
 
 byte readByte(chip8* chip) {
     byte b = chip->memory[chip->PC];
-    chip->PC++;
+    chip->PC = (chip->PC + 1) & 0x0FFF;
     return b;
 }
 
@@ -47,7 +47,7 @@ chip8result executeInstruction(chip8 *chip) {
     byte x = getX(instruction);
     byte y = getY(instruction);
 
-    byte buffer;
+    byte buffer = 0;;
 
     switch(instruction >> 12) {
         case 0x0:
@@ -112,12 +112,21 @@ chip8result executeInstruction(chip8 *chip) {
                     break;
                 case 0x1: //OR Vx, Vy
                     chip->V[x] |= chip->V[y];
+                    if (VF_RESET) {
+                        chip->V[0xF] = 0;
+                    }
                     break;
                 case 0x2: //AND Vx, Vy
                     chip->V[x] &= chip->V[y];
+                    if (VF_RESET) {
+                        chip->V[0xF] = 0;
+                    }
                     break;
                 case 0x3: //XOR Vx, Vy
                     chip->V[x] ^= chip->V[y];
+                    if (VF_RESET) {
+                        chip->V[0xF] = 0;
+                    }
                     break;
                 case 0x4: //ADD Vx, Vy
                     buffer = chip->V[x];
@@ -177,27 +186,36 @@ chip8result executeInstruction(chip8 *chip) {
             draw(chip, chip->V[x], chip->V[y], n);
             break;
         case 0xE:
-            return ERROR;
-            byte ending = nn;
-            switch (ending) {
+            switch (nn) {
                 case 0x9E: //SKP Vx
-                    //TODO: Skip if pressed
+                    if(chip->V[x] < 0x10 && chip->keys[chip->V[x]] == 0x1) {
+                        chip->PC += 2;
+                    }
                     break;
                 case 0xA1: //SKNP Vx
-                    //TODO: Skip if not pressed
+                    if(chip->V[x] < 0x10 && chip->keys[chip->V[x]] == 0x0) {
+                        chip->PC += 2;
+                    }
                     break;
             }
             break;
         case 0xF:
+            //TODO: create sound
             byte end = nn;
-            //TODO: create sound and delay timers
             switch (end) {
                 case 0x07: //LD Vx, DT
                     chip->V[x] = chip->DT;
                     break;
                 case 0x0A: //LD Vx, K
-                    return ERROR;
-                    //TODO: wait for key pressed, stop execution
+                    for(byte i = 0; i < 0x10; i++) {
+                        if(chip->keysNow[i] == 1) {
+                            chip->V[x] = i;
+                            buffer = 1;
+                        }
+                    }
+                    if (buffer == 0) {
+                        chip->PC -= 2;
+                    }
                     break;
                 case 0x15: //LD DT, Vx
                     chip->DT = chip->V[x];
@@ -222,12 +240,14 @@ chip8result executeInstruction(chip8 *chip) {
                     }
                     break;
                 case 0x55: //LD [I], Vx
-                    byte index = x;
-                    if(chip->I + index > 0xFFF) {
+                    if(chip->I + x > 0xFFF) {
                         return ERROR;
                     }
-                    for(int i = 0; i <= index; i++) {
+                    for(int i = 0; i <= x; i++) {
                         chip->memory[chip->I + i] = chip->V[i];
+                    }
+                    if (MEMORY) {
+                        chip->I += x + 1;
                     }
                     break;
                 case 0x65: //LD Vx, [I]
@@ -237,6 +257,9 @@ chip8result executeInstruction(chip8 *chip) {
                     }
                     for(int i = 0; i <= index2; i++) {
                         chip->V[i] = chip->memory[chip->I + i];
+                    }
+                    if (MEMORY) {
+                        chip->I += x + 1;
                     }
                     break;
             }
