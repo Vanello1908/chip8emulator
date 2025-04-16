@@ -15,8 +15,9 @@ chip8* createChip() {
 
 void resetChip(chip8 *chip) {
     memset(chip, 0, sizeof(chip8));
+    memcpy(&chip->memory, &INTERPRETER_DIGITS_STUB, 80);
     chip->PC = 0x200;
-    chip->SP = 0xFFFF;
+    chip->SP = 0;
 }
 
 void clearDisplay(chip8 *chip) {
@@ -47,20 +48,23 @@ chip8result executeInstruction(chip8 *chip) {
     byte x = getX(instruction);
     byte y = getY(instruction);
 
-    byte buffer = 0;;
+    byte buffer = 0;
+
+    if (LOGGING) {
+        printf("Address: %03X\nInstruction: %04X\nRegisters: ", chip->PC - 2, instruction);
+        for(int i = 0; i < 0x10; i ++) {
+            printf("%02X ", chip->V[i]);
+        }
+        printf("\n\n\n");
+    }
 
     switch(instruction >> 12) {
         case 0x0:
             if(instruction == 0x00E0) { //CLS
                 clearDisplay(chip);
             } else if(instruction == 0x00EE) { //RET
-                if(chip->SP != 0xFFFF) {
-                    chip->PC = chip->stack[chip->SP];
-                    chip->SP--;
-                }
-                else {
-                    return ERROR;
-                }
+                chip->PC = chip->stack[chip->SP];
+                chip->SP = (chip->SP - 1) & 0xF;
             }
             break;
 
@@ -69,14 +73,9 @@ chip8result executeInstruction(chip8 *chip) {
             break;
 
         case 0x2: //CALL addr
-            if(chip->SP != 0xF) {
-                chip->SP++;
-                chip->stack[chip->SP] = chip->PC;
-                chip->PC = nnn;
-            }
-            else {
-                return ERROR;
-            }
+            chip->SP = (chip->SP + 1) & 0xF;
+            chip->stack[chip->SP] = chip->PC;
+            chip->PC = nnn;
             break;
 
         case 0x3: //SE Vx, byte
@@ -139,7 +138,7 @@ chip8result executeInstruction(chip8 *chip) {
                     chip->V[0xF] = buffer;
                     break;
                 case 0x6: //SHR Vx
-                    if(COPY_Y_ON_SHIFTING) {
+                    if(SHIFTING) {
                         chip->V[x] = chip->V[y];
                     }
                     buffer = chip->V[x] & 0b1;
@@ -152,7 +151,7 @@ chip8result executeInstruction(chip8 *chip) {
                     chip->V[0xF] = buffer;
                     break;
                 case 0xE: //SHL Vx
-                    if(COPY_Y_ON_SHIFTING) {
+                    if(SHIFTING) {
                         chip->V[x] = chip->V[y];
                     }
                     buffer = (chip->V[x] >> 7) & 0b1;
@@ -172,7 +171,7 @@ chip8result executeInstruction(chip8 *chip) {
             break;
         case 0xB: //JP V0, addr
             word address = nnn;
-            if(BXNN_JUMP) {
+            if(JUMPING) {
                 address += chip->V[x];
             } else {
                 address += chip->V[0x0];
@@ -188,12 +187,12 @@ chip8result executeInstruction(chip8 *chip) {
         case 0xE:
             switch (nn) {
                 case 0x9E: //SKP Vx
-                    if(chip->V[x] < 0x10 && chip->keys[chip->V[x]] == 0x1) {
+                    if(chip->keys[chip->V[x] & 0xF] == 0x1) {
                         chip->PC += 2;
                     }
                     break;
                 case 0xA1: //SKNP Vx
-                    if(chip->V[x] < 0x10 && chip->keys[chip->V[x]] == 0x0) {
+                    if(chip->keys[chip->V[x] & 0xF] == 0x0) {
                         chip->PC += 2;
                     }
                     break;
@@ -224,42 +223,33 @@ chip8result executeInstruction(chip8 *chip) {
                     chip->ST = chip->V[x];
                     break;
                 case 0x1E: //ADD I, Vx
-                    chip->I += chip->V[x];
+                    chip->I = (chip->I + chip->V[x]) & 0x0FFF;
                     break;
                 case 0x29: //LD F, Vx
-                    //TODO: interpreter font digits
+                    chip->I = (chip->V[x] & 0xF) * 5;
                     break;
                 case 0x33: //LD B, Vx
-                    if(chip->I + 2 > 0xFFF) {
-                        return ERROR;
-                    }
                     byte num = chip->V[x];
                     for(int i = 0; i < 3; i++) {
-                        chip->memory[chip->I + (2 - i)] = num % 10;
+                        chip->memory[(chip->I + (2 - i)) & 0x0FFF] = num % 10;
                         num /= 10;
                     }
                     break;
                 case 0x55: //LD [I], Vx
-                    if(chip->I + x > 0xFFF) {
-                        return ERROR;
-                    }
                     for(int i = 0; i <= x; i++) {
-                        chip->memory[chip->I + i] = chip->V[i];
+                        chip->memory[(chip->I + i) & 0x0FFF] = chip->V[i];
                     }
                     if (MEMORY) {
-                        chip->I += x + 1;
+                        chip->I = (chip->I + x + 1) & 0x0FFF;
                     }
                     break;
                 case 0x65: //LD Vx, [I]
                     byte index2 = x;
-                    if(chip->I + index2 > 0xFFF) {
-                        return ERROR;
-                    }
                     for(int i = 0; i <= index2; i++) {
-                        chip->V[i] = chip->memory[chip->I + i];
+                        chip->V[i] = chip->memory[(chip->I + i) & 0x0FFF];
                     }
                     if (MEMORY) {
-                        chip->I += x + 1;
+                        chip->I = (chip->I + x + 1) & 0x0FFF;
                     }
                     break;
             }
@@ -272,17 +262,22 @@ void draw(chip8 *chip, byte x, byte y, byte size) {
     byte flipResult = 0;
     for(byte i = 0; i < size; i++) {
         byte spriteByte = chip->memory[chip->I+i];
+        if (y < SCREEN_Y && y + i == SCREEN_Y && CLIPPING) {
+            return;
+        }
         byte localY = (y + i) % SCREEN_Y;
         for(byte j = 0; j < 8; j++) {
-            byte localX = (x + (7 - j)) % SCREEN_X;
-            byte newPixel = spriteByte & 0b1;
+            if (x < SCREEN_X && x + j == SCREEN_X && CLIPPING) {
+                break;
+            }
+            byte localX = (x + j) % SCREEN_X;
+            byte newPixel = (spriteByte >> (7 - j)) & 1;
             if(newPixel) {
                 chip->screen[localY][localX] ^= newPixel;
                 if(chip->screen[localY][localX] == 0) {
                     flipResult = 1;
                 }
             }
-            spriteByte >>= 1;
         }
     }
     chip->V[0xF] = flipResult;

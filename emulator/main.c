@@ -52,12 +52,12 @@ int processSDLEvents(chip8* chip) {
         if(windowEvent.type == SDL_KEYDOWN) {
             byte key = keyToByte(SDL_GetKeyName(windowEvent.key.keysym.sym));
             if(key < 0x10) {
-                chip->keysNow[key] = chip->keys[key] == 0;
                 chip->keys[key] = 0x1;
             }
         } else if(windowEvent.type == SDL_KEYUP) {
             byte key = keyToByte(SDL_GetKeyName(windowEvent.key.keysym.sym));
             if(key < 0x10) {
+                chip->keysNow[key] = 0x1;
                 chip->keys[key] = 0x0;
             }
         }
