@@ -259,6 +259,8 @@ chip8result executeInstruction(chip8 *chip) {
 }
 
 void draw(chip8 *chip, byte x, byte y, byte size) {
+    x = x % SCREEN_X;
+    y = y % SCREEN_Y;
     byte flipResult = 0;
     for(byte i = 0; i < size; i++) {
         byte spriteByte = chip->memory[(chip->I+i) & 0x0FFF];
