@@ -91,7 +91,7 @@ chip8result executeInstruction(chip8 *chip) {
             break;
 
         case 0x5: //SE Vx, Vy
-            if(chip->V[x] == chip->V[y]) {
+            if(n == 0 && chip->V[x] == chip->V[y]) {
                 chip->PC += 2;
             }
             break;
@@ -261,9 +261,9 @@ chip8result executeInstruction(chip8 *chip) {
 void draw(chip8 *chip, byte x, byte y, byte size) {
     byte flipResult = 0;
     for(byte i = 0; i < size; i++) {
-        byte spriteByte = chip->memory[chip->I+i];
+        byte spriteByte = chip->memory[(chip->I+i) & 0x0FFF];
         if (y < SCREEN_Y && y + i == SCREEN_Y && CLIPPING) {
-            return;
+            break;
         }
         byte localY = (y + i) % SCREEN_Y;
         for(byte j = 0; j < 8; j++) {
@@ -281,7 +281,6 @@ void draw(chip8 *chip, byte x, byte y, byte size) {
         }
     }
     chip->V[0xF] = flipResult;
-
 }
 
 word startChip(chip8 *chip) {

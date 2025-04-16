@@ -34,6 +34,6 @@ static const byte LOGGING = 0;
 static const byte SHIFTING = 1;
 static const byte JUMPING = 0;
 static const byte VF_RESET = 1;
-static const byte MEMORY = 0;
+static const byte MEMORY = 1;
 static const byte CLIPPING = 1;
 #endif

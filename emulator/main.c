@@ -67,7 +67,7 @@ int processSDLEvents(chip8* chip) {
 
 int main( int argc, char *argv[] )
 {
-    const char* romPath = "./roms/5.ch8";
+    const char* romPath = "./roms/3.ch8";
     if(argc > 1) {
         romPath = argv[1];
     }
